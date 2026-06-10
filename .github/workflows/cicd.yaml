@@ -26,16 +26,22 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build, tag, and push image to Amazon ECR
+        uses: docker/build-push-action@v5
         id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPO }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output Image URI
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          # Fix: use GITHUB_OUTPUT instead of deprecated set-output
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPO }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
 
   Continuous-Deployment:
     needs: Continuous-Integration
@@ -64,7 +70,6 @@ jobs:
           docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Stop and remove existing container
-        # Gracefully stop old container before starting new one to avoid port conflicts
         run: |
           docker stop myapp-container || true
           docker rm myapp-container || true
@@ -82,5 +87,6 @@ jobs:
             -p 8080:8080 \
             $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Clean up unused Docker images
-        run: docker image prune -f
+      - name: Clean up old Docker data safely
+        # Keeps local layer cache intact for speedy pulls, but drops stale images/volumes older than 24h
+        run: docker system prune -a --volumes -f --filter "until=24h"
