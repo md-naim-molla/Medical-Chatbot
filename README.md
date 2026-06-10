@@ -6,7 +6,7 @@
 Clone the repository
 
 ```bash
-git clone https://github.com/md-naim-molla/Medical-Chatbot-with-LLMs-LangChain-Pinecone-Flask-AWS.git
+git clone https://github.com/md-naim-molla/Medical-Chatbot.git
 ```
 ### STEP 01- Create a conda environment after opening the repository
 
@@ -128,3 +128,6 @@ open up localhost:
    - ECR_REPO
    - PINECONE_API_KEY
    - OPENAI_API_KEY
+
+
+   ![Medical Chatbot]("D:\Photos\Medical chatbot.png")
